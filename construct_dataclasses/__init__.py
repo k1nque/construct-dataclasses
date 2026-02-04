@@ -15,14 +15,47 @@
 from __future__ import annotations
 
 import dataclasses
+import enum
 import inspect
 import textwrap
-import enum
-import sys
-
 from collections.abc import Mapping
 
 import construct as cs
+
+from .typed_ints import (
+    ConstructProto,
+    Int8sb_T,
+    Int8sl_T,
+    Int8sn_T,
+    Int8ub_T,
+    Int8ul_T,
+    Int8un_T,
+    Int16sb_T,
+    Int16sl_T,
+    Int16sn_T,
+    Int16ub_T,
+    Int16ul_T,
+    Int16un_T,
+    Int24sb_T,
+    Int24sl_T,
+    Int24sn_T,
+    Int24ub_T,
+    Int24ul_T,
+    Int24un_T,
+    Int32sb_T,
+    Int32sl_T,
+    Int32sn_T,
+    Int32ub_T,
+    Int32ul_T,
+    Int32un_T,
+    Int64sb_T,
+    Int64sl_T,
+    Int64sn_T,
+    Int64ub_T,
+    Int64ul_T,
+    Int64un_T,
+    Int_T,
+)
 
 __all__ = [
     "csfield",
@@ -34,6 +67,38 @@ __all__ = [
     "container",
     "DataclassStruct",
     "DataclassBitStruct",
+    "ConstructProto",
+    "Int_T",
+    "Int8ub_T",
+    "Int8ul_T",
+    "Int8sb_T",
+    "Int8sl_T",
+    "Int8un_T",
+    "Int8sn_T",
+    "Int16ub_T",
+    "Int16ul_T",
+    "Int16sb_T",
+    "Int16sl_T",
+    "Int16un_T",
+    "Int16sn_T",
+    "Int24ub_T",
+    "Int24ul_T",
+    "Int24sb_T",
+    "Int24sl_T",
+    "Int24un_T",
+    "Int24sn_T",
+    "Int32ub_T",
+    "Int32ul_T",
+    "Int32sb_T",
+    "Int32sl_T",
+    "Int32un_T",
+    "Int32sn_T",
+    "Int64ub_T",
+    "Int64ul_T",
+    "Int64sb_T",
+    "Int64sl_T",
+    "Int64un_T",
+    "Int64sn_T",
 ]
 
 
@@ -149,7 +214,10 @@ def csfield(
 
 
 def csenum(
-    model: type, subcon: cs.Construct, doc: str | None = None, parsed=None,
+    model: type,
+    subcon: cs.Construct,
+    doc: str | None = None,
+    parsed=None,
     metadata: Mapping | None = None,
 ) -> dataclasses.Field:
     """Creates an enum field that tries to parse the given enum.
@@ -157,7 +225,9 @@ def csenum(
     .. warning::
         The returned value may be of type ``int`` if no suitable representation could be found.
     """
-    return _process_csfield(model, cs.Enum(subcon, model), doc=doc, parsed=parsed, metadata=metadata)
+    return _process_csfield(
+        model, cs.Enum(subcon, model), doc=doc, parsed=parsed, metadata=metadata
+    )
 
 
 def tfield(
@@ -206,7 +276,7 @@ def _process_csfield(
         else:
             default = target_subcon.value
 
-    _metadata={
+    _metadata = {
         "subcon": target_subcon,
         "subcon_orig_type": model or type(subcon),
     }
@@ -278,7 +348,7 @@ def _to_struct_inner(
 
         return cs.Struct(**subcon_fields)
 
-    elif isinstance(obj, cs.Construct):
+    if isinstance(obj, cs.Construct):
         return obj
 
 
@@ -338,9 +408,9 @@ def _to_object_inner(value, field: dataclasses.Field):
 
     if isinstance(value, cs.ListContainer):
         return list(map(lambda x: _to_object_inner(x, field), value))
-    elif dataclasses.is_dataclass(subcon_type):
+    if dataclasses.is_dataclass(subcon_type):
         return to_object(value, subcon_type)
-    elif isinstance(value, cs.EnumIntegerString):
+    if isinstance(value, cs.EnumIntegerString):
         # Allow list declarations of enum values. If there is a type hint
         # with a list-like type, we can take the first type argument and use
         # it as our enum type
@@ -380,8 +450,8 @@ def _process_struct_dataclass(
     else:
         ds_struct = DataclassStruct(cls, depth, reverse, union=union)
 
-    setattr(new_cls, "parser", ds_struct)
-    setattr(new_cls, "struct", ds_struct.subcon)
+    new_cls.parser = ds_struct
+    new_cls.struct = ds_struct.subcon
 
     if hasattr(new_cls, "build"):
         raise ValueError(
@@ -393,8 +463,10 @@ def _process_struct_dataclass(
             f"Invalid field definition: field 'parse' alredy exists in class {new_cls}"
         )
 
-    setattr(new_cls, "build", lambda self: self.parser.build(self))
-    setattr(new_cls, "parse", classmethod(lambda _cls, *args, **kwargs: _cls.parser.parse(*args, **kwargs)))
+    new_cls.build = lambda self: self.parser.build(self)
+    new_cls.parse = classmethod(
+        lambda _cls, *args, **kwargs: _cls.parser.parse(*args, **kwargs)
+    )
 
     return new_cls
 
@@ -408,7 +480,7 @@ def _process_container(cls):
     #
     # As "header" might be a custom dataclass type, we have to support a
     # dict-like access to prevent issues.
-    setattr(cls, "__getitem__", lambda self, key: getattr(self, key))
+    cls.__getitem__ = lambda self, key: getattr(self, key)
     return cls
 
 
